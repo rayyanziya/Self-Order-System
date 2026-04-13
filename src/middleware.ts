@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const PROTECTED = ["/kitchen", "/admin"];
+const PROTECTED = ["/kitchen", "/admin", "/desk"];
 
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
@@ -18,5 +18,5 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/kitchen", "/kitchen/:path*", "/admin", "/admin/:path*"],
+  matcher: ["/kitchen", "/kitchen/:path*", "/admin", "/admin/:path*", "/desk", "/desk/:path*"],
 };
