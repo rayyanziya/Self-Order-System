@@ -62,7 +62,7 @@ export default function ReceiptPage() {
       <div className="max-w-sm mx-auto px-6 py-8 font-mono text-sm text-stone-900">
         {/* Header */}
         <div className="text-center space-y-1 mb-6">
-          <h1 className="text-xl font-bold tracking-widest uppercase">SOS Cafe</h1>
+          <h1 className="text-xl font-bold tracking-widest uppercase">GDI</h1>
           <p className="text-xs text-stone-500">Indonesian Street Food · Istanbul</p>
           <p className="text-xs text-stone-400">{formatDateTime(order.createdAt)}</p>
         </div>

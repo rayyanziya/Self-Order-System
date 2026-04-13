@@ -1,0 +1,261 @@
+================================================================================
+  GDI SELF-ORDERING SYSTEM — COMPLETE FLOW DOCUMENTATION
+================================================================================
+
+This document explains the full flow of the system, from the moment a customer
+opens the menu on their phone to the moment their order is collected.
+
+--------------------------------------------------------------------------------
+  PAGES / URLs AT A GLANCE
+--------------------------------------------------------------------------------
+
+  CUSTOMER-FACING
+  ├── /menu                        Customer browses and adds items
+  ├── /cart                        Customer reviews cart and places order
+  ├── /order/[id]/confirmed        Order placed confirmation screen
+  ├── /order/[id]/track            Live order status tracking
+  ├── /order/[id]/receipt          Printable receipt
+  └── /desk                        Payment desk screen (visible to customers)
+
+  STAFF-ONLY
+  ├── /kitchen                     Kitchen dashboard (mark orders ready, clear)
+  └── /admin                       Admin panel (menu management, stats, reset)
+
+--------------------------------------------------------------------------------
+  1. CUSTOMER FLOW — ORDERING
+--------------------------------------------------------------------------------
+
+STEP 1 — Browse the menu (/menu)
+  - Customer opens the menu on their phone or any browser.
+  - Items are displayed in a 2-column grid. Food items appear first, drinks last.
+  - Customer taps "+ Add" on any item to add it to their cart.
+  - The Cart button in the header shows a live count of items in the cart.
+  - If the customer has a previous active order, a banner appears at the top
+    showing the order number and status (e.g. "Order A-001 is being prepared").
+    Tapping "Track" takes them back to their order. Tapping × dismisses it.
+
+STEP 2 — Review cart (/cart)
+  - Customer taps the Cart button to open their cart.
+  - Each item shows: name, unit price, quantity controls (+/−), total, Remove.
+  - Optional: tap "+ Add note for kitchen" under any item to leave a note
+    (e.g. "extra spicy", "no onion", "less sugar").
+  - Customer selects how they will dine: Dine In or Takeaway.
+  - Taps "Place Order" to confirm.
+
+STEP 3 — Order confirmed (/order/[id]/confirmed)
+  - A confirmation screen appears with the order number (e.g. A-003).
+  - The order number format is:
+      A-xxx  → food-only order
+      B-xxx  → drink-only order
+      AB-xxx → order with both food and drinks
+    Numbers are sequential per day, always 3 digits (001, 002 ... 010 ... 100).
+  - Customer is instructed to go to the payment desk and find their number.
+  - A "Track My Order" button links to the live status page.
+  - The order ID is saved to the browser so the customer can find it again
+    from the menu page if they navigate away.
+
+--------------------------------------------------------------------------------
+  2. PAYMENT DESK FLOW — CUSTOMER PAYS
+--------------------------------------------------------------------------------
+
+WHO: Staff opens /desk on a laptop or screen at the counter.
+     The screen is visible to customers so they can see their order number.
+
+  - The left panel shows all orders currently waiting for payment.
+  - Each order is a large colored card:
+      Orange  = A- (food only)
+      Teal    = B- (drinks only)
+      Purple  = AB- (food + drinks)
+  - The customer finds their number on the screen and taps it.
+  - The right panel opens showing:
+      • Order number and type (Dine In / Takeaway)
+      • All ordered items with quantities and notes
+      • Total amount
+      • "Pay Now" button
+  - Customer taps "Pay Now".
+  - A 2-second payment processing animation plays (simulating card tap).
+  - On success: a green checkmark appears for ~3 seconds, then the panel resets.
+  - The order status changes: WAITING_PAYMENT → IN_PROGRESS.
+  - The order disappears from the desk screen and appears in the kitchen.
+
+  NOTE: On mobile, tapping an order number shows the detail as a full-screen
+  overlay with a Close (×) button to go back to the order list.
+
+--------------------------------------------------------------------------------
+  3. KITCHEN FLOW — PREPARING THE ORDER
+--------------------------------------------------------------------------------
+
+WHO: Kitchen staff opens /kitchen on a tablet or screen in the kitchen.
+     The page auto-refreshes every 5 seconds — no manual reload needed.
+
+  IN PROGRESS TAB
+  - Shows all orders that have been paid and are being prepared.
+  - Each card shows:
+      • Order number (color-coded)
+      • Time since order was placed (e.g. "3 mins ago")
+      • Dine In or Takeaway badge
+      • Every item with quantity and any customer notes
+        (e.g. "→ extra spicy" appears below the item name)
+      • Order total
+      • "Mark as Ready" button
+      • "Print Receipt ↗" link (opens receipt in a new tab)
+  - When an order is prepared, staff taps "Mark as Ready".
+  - The order moves to the Ready tab.
+
+  READY TAB
+  - Shows all orders that are ready for collection.
+  - Same card layout as In Progress.
+  - Each card has a "Clear" button to remove it from view after the customer
+    collects their order.
+  - A "Clear All" button appears in the header when there are ready orders —
+    clears every ready order at once (useful at the end of a rush).
+  - "Print Receipt ↗" is available on every card here too.
+
+--------------------------------------------------------------------------------
+  4. CUSTOMER FLOW — TRACKING THE ORDER
+--------------------------------------------------------------------------------
+
+  - Customer visits /order/[id]/track (via the link on the confirmed page,
+    the "My Order" banner on the menu, or a bookmarked URL).
+  - The page polls the server every 5 seconds and updates automatically.
+  - The status tracker shows three stages:
+      [Waiting for Payment] → [In Progress] → [Ready]
+  - Once the order is In Progress or Ready, a small "View Receipt ↗" link
+    appears — opens the receipt in a new tab.
+  - When status changes to Ready, a green banner appears:
+      "Your order is ready! Please collect it from the desk."
+    A prominent "View Receipt" button also appears.
+  - Customer collects their order from the counter.
+
+--------------------------------------------------------------------------------
+  5. RECEIPT (/order/[id]/receipt)
+--------------------------------------------------------------------------------
+
+  - Accessible from the track page (once In Progress or Ready) and from every
+    kitchen card via "Print Receipt ↗".
+  - Shows a thermal-receipt-style layout:
+      GDI
+      Indonesian Street Food · Istanbul
+      [date and time]
+      ─────────────────────────────
+      Order No.     A-003
+      Service       Dine In
+      ─────────────────────────────
+      Ceker Mercon × 1      225 TL
+        → extra spicy
+      Es Teh Manis × 1       75 TL
+      ─────────────────────────────
+      TOTAL                 300 TL
+      ─────────────────────────────
+      Thank you for dining with us!
+      Terima kasih · Teşekkür ederiz
+  - A "Print / Save as PDF" button at the top triggers the browser print dialog.
+    The button and header bar are hidden when printing.
+
+--------------------------------------------------------------------------------
+  6. ADMIN DASHBOARD (/admin)
+--------------------------------------------------------------------------------
+
+WHO: Owner or manager only. Staff-facing page — do not share with customers.
+
+  The admin dashboard is the control center for the entire cafe operation.
+  It gives the owner a real-time snapshot of daily performance, full control
+  over the menu, and tools to manage the system day-to-day — all from one page,
+  no technical knowledge required.
+
+  ── TODAY'S OVERVIEW ──────────────────────────────────────────────────────────
+
+  A live summary of the current day's activity, displayed as four stat cards:
+
+      ┌─────────────────┐  ┌─────────────────┐
+      │  Orders Today   │  │    Revenue      │
+      │      12         │  │   2,475 TL      │
+      └─────────────────┘  └─────────────────┘
+      ┌─────────────────┐  ┌─────────────────┐
+      │  In Progress    │  │  Ready / Paid   │
+      │       3         │  │       9         │
+      └─────────────────┘  └─────────────────┘
+
+  - Numbers update automatically every 30 seconds — no refresh needed.
+  - Only counts orders that have passed payment (excludes abandoned carts).
+  - Stats reset to zero automatically at midnight every day.
+    The owner sees a clean slate each morning without any manual action.
+
+  ── ORDER NUMBER COUNTER ──────────────────────────────────────────────────────
+
+  - Each day, orders are numbered sequentially: -001, -002, -003, and so on.
+  - At the end of the day, the owner taps "Reset Order Counter" so the next
+    morning's first order starts fresh from -001 again.
+  - A two-step confirmation prevents accidental resets mid-service.
+
+  ── MENU MANAGEMENT ───────────────────────────────────────────────────────────
+
+  The owner has full control over what appears on the customer menu:
+
+  AVAILABILITY TOGGLE
+  - Every item has an on/off toggle switch.
+  - Switching an item OFF instantly hides it from the customer menu.
+  - Useful for temporarily removing a sold-out item without deleting it.
+  - Toggle it back ON when it's available again.
+
+  ADD NEW ITEM
+  - The "+ Add Item" button opens a form at the top of the menu list.
+  - Fields:
+      Code         Unique identifier, e.g. A003 (auto-uppercased)
+      Category     Food or Drink (affects order number prefix logic)
+      Name         The name shown to customers on the menu
+      Price (TL)   Numeric price
+      Description  Optional short description shown under the item name
+      Image path   Optional, e.g. /images/filename.jpg
+                   (image file must be placed in the public/images/ folder)
+  - New items go live immediately and are visible to customers right away.
+
+  REMOVE ITEM
+  - Each item has a "Remove" link that permanently deletes it.
+  - If the item has ever appeared in a real order, deletion is blocked to
+    preserve order history — the owner should disable it instead.
+  - Requires an inline confirmation click to prevent accidents.
+
+  ── CLEAR ALL ORDERS (Development / Testing Utility) ─────────────────────────
+
+  - Wipes all orders from the database and resets today's stats to zero.
+  - Clearly marked as a development tool — intended for testing only,
+    not for use during actual cafe hours.
+  - Requires a two-step confirmation before executing.
+
+--------------------------------------------------------------------------------
+  7. ORDER NUMBER LOGIC
+--------------------------------------------------------------------------------
+
+  Prefix is determined by what's in the order:
+    • Only food items   → A-   (e.g. A-001)
+    • Only drink items  → B-   (e.g. B-001)
+    • Food AND drinks   → AB-  (e.g. AB-001)
+
+  All prefixes share the same daily counter.
+  Example sequence across a morning:
+    Customer 1 orders food only          → A-001
+    Customer 2 orders food + drink       → AB-002
+    Customer 3 orders drinks only        → B-003
+    Customer 4 orders food only          → A-004
+
+  Counter always formats to 3 digits: 001 … 009, 010, 099, 100, 101 …
+  If a day somehow exceeds 999 orders, the number extends to 4 digits naturally.
+
+--------------------------------------------------------------------------------
+  8. DATA & STORAGE
+--------------------------------------------------------------------------------
+
+  - All order and menu data is stored in a local SQLite database (prisma/dev.db).
+  - The database file is NOT included in the GitHub repository — it lives only
+    on the machine running the server.
+  - Cart items are stored in the browser's localStorage — they survive page
+    refreshes but are cleared after a successful order is placed.
+  - The active order ID is also saved to localStorage so the "My Order" banner
+    can reappear if the customer navigates away from the tracking page.
+  - To inspect the database directly, run: npx prisma studio
+    (from the project root, with the dev server stopped or on a different port).
+
+================================================================================
+  END OF DOCUMENT
+================================================================================

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import type { OrderDTO } from "@/lib/types";
 import KitchenOrderCard from "@/components/kitchen/KitchenOrderCard";
 import KitchenFilters from "@/components/kitchen/KitchenFilters";
@@ -16,6 +16,25 @@ export default function KitchenPage() {
   const [filter, setFilter] = useState<KitchenFilter>("IN_PROGRESS");
   const [actionId, setActionId] = useState<number | null>(null);
   const [clearingAll, setClearingAll] = useState(false);
+  const [soundEnabled, setSoundEnabled] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("kitchen_sound") !== "false";
+    }
+    return true;
+  });
+
+  const soundEnabledRef = useRef(soundEnabled);
+  const knownIds = useRef<Set<number>>(new Set());
+  const isFirstLoad = useRef(true);
+
+  const toggleSound = () => {
+    setSoundEnabled((prev) => {
+      const next = !prev;
+      soundEnabledRef.current = next;
+      localStorage.setItem("kitchen_sound", String(next));
+      return next;
+    });
+  };
 
   const fetchOrders = useCallback(async () => {
     try {
@@ -23,7 +42,21 @@ export default function KitchenPage() {
         fetch("/api/orders?status=IN_PROGRESS&cleared=false").then((r) => r.json()),
         fetch("/api/orders?status=READY&cleared=false").then((r) => r.json()),
       ]);
-      setAllOrders([...inProg.orders, ...ready.orders]);
+      const incoming: OrderDTO[] = [...inProg.orders, ...ready.orders];
+
+      // Detect new IN_PROGRESS orders not previously seen
+      const newIds = incoming
+        .filter((o) => o.status === "IN_PROGRESS" && !knownIds.current.has(o.id))
+        .map((o) => o.id);
+
+      if (!isFirstLoad.current && newIds.length > 0 && soundEnabledRef.current) {
+        new Audio("/sounds/chime.mp3").play().catch(() => {});
+      }
+
+      incoming.forEach((o) => knownIds.current.add(o.id));
+      isFirstLoad.current = false;
+
+      setAllOrders(incoming);
     } finally {
       setLoading(false);
     }
@@ -63,7 +96,6 @@ export default function KitchenPage() {
     setActionId(orderId);
     try {
       await fetch(`/api/orders/${orderId}/clear`, { method: "PATCH" });
-      // Optimistically remove from view immediately
       setAllOrders((prev) => prev.filter((o) => o.id !== orderId));
     } finally {
       setActionId(null);
@@ -81,9 +113,19 @@ export default function KitchenPage() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold text-stone-900">Kitchen Dashboard</h1>
-              <p className="text-sm text-stone-500">SOS Cafe — Staff only</p>
+              <p className="text-sm text-stone-500">GDI — Staff only</p>
             </div>
             <div className="flex items-center gap-3">
+              <button
+                onClick={toggleSound}
+                className={`text-xs px-3 py-1.5 rounded-lg border transition-colors ${
+                  soundEnabled
+                    ? "border-orange-300 text-orange-600 bg-orange-50"
+                    : "border-stone-300 text-stone-400 bg-white"
+                }`}
+              >
+                {soundEnabled ? "🔔 Sound On" : "🔕 Sound Off"}
+              </button>
               <KitchenFilters
                 active={filter}
                 onChange={setFilter}
@@ -128,9 +170,7 @@ export default function KitchenPage() {
                 onMarkReady={
                   order.status === "IN_PROGRESS" ? handleMarkReady : undefined
                 }
-                onClear={
-                  order.status === "READY" ? handleClear : undefined
-                }
+                onClear={order.status === "READY" ? handleClear : undefined}
                 loading={actionId === order.id}
               />
             ))}

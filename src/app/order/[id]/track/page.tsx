@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect, useRef } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useOrderStatus } from "@/hooks/useOrderStatus";
@@ -13,6 +14,38 @@ export default function TrackPage() {
   const orderId = Number(params.id);
 
   const { order, loading, error } = useOrderStatus(orderId);
+
+  const prevStatusRef = useRef<string | null>(null);
+  const [notifPermission, setNotifPermission] = useState<NotificationPermission>("default");
+
+  // Initialise permission state from browser on mount
+  useEffect(() => {
+    if (typeof Notification !== "undefined") {
+      setNotifPermission(Notification.permission);
+    }
+  }, []);
+
+  // Fire notification + chime when status transitions to READY
+  useEffect(() => {
+    if (!order) return;
+    const prev = prevStatusRef.current;
+    if (prev && prev !== "READY" && order.status === "READY") {
+      if (typeof Notification !== "undefined" && Notification.permission === "granted") {
+        new Notification("Your order is ready! 🎉", {
+          body: `Order ${order.orderNumber} — please collect at the counter.`,
+          icon: "/logos/logo.png",
+        });
+      }
+      new Audio("/sounds/chime.mp3").play().catch(() => {});
+    }
+    prevStatusRef.current = order.status;
+  }, [order?.status]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const requestNotifPermission = async () => {
+    if (typeof Notification === "undefined") return;
+    const result = await Notification.requestPermission();
+    setNotifPermission(result);
+  };
 
   if (loading) {
     return (
@@ -62,6 +95,33 @@ export default function TrackPage() {
           </div>
         )}
 
+        {/* Notification opt-in — show while order is being prepared */}
+        {order.status === "IN_PROGRESS" && typeof Notification !== "undefined" && (
+          <div className="bg-white rounded-xl border border-stone-200 px-4 py-3 flex items-center justify-between gap-3">
+            {notifPermission === "granted" ? (
+              <p className="text-sm text-green-700 font-medium">
+                Notifications on ✓ — we&apos;ll alert you when ready
+              </p>
+            ) : notifPermission === "denied" ? (
+              <p className="text-xs text-stone-400">
+                Notifications blocked — enable them in browser settings to get alerted.
+              </p>
+            ) : (
+              <>
+                <p className="text-sm text-stone-600">
+                  Get notified when your order is ready
+                </p>
+                <button
+                  onClick={requestNotifPermission}
+                  className="shrink-0 text-xs font-semibold px-3 py-1.5 rounded-lg bg-orange-500 hover:bg-orange-600 text-white transition-colors"
+                >
+                  🔔 Notify me
+                </button>
+              </>
+            )}
+          </div>
+        )}
+
         {/* Tracker */}
         <div className="bg-white rounded-2xl border border-stone-200 p-6">
           <OrderStatusTracker status={order.status} />
@@ -71,6 +131,17 @@ export default function TrackPage() {
           <p className="text-center text-xs text-stone-400">
             This page updates automatically every 5 seconds.
           </p>
+        )}
+
+        {/* Receipt link — available once order is with the kitchen */}
+        {order.status !== "WAITING_PAYMENT" && (
+          <Link
+            href={`/order/${orderId}/receipt`}
+            target="_blank"
+            className="block text-center text-xs text-stone-400 hover:text-orange-500 transition-colors"
+          >
+            View Receipt ↗
+          </Link>
         )}
 
         <Link

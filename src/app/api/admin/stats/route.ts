@@ -1,13 +1,24 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 
-export async function GET() {
-  const startOfDay = new Date();
-  startOfDay.setHours(0, 0, 0, 0);
+export async function GET(req: NextRequest) {
+  const range = req.nextUrl.searchParams.get("range") ?? "today";
+
+  const start = new Date();
+  start.setHours(0, 0, 0, 0);
+
+  if (range === "week") {
+    // Go back to Monday of the current week
+    const day = start.getDay(); // 0 = Sunday
+    const diff = day === 0 ? 6 : day - 1;
+    start.setDate(start.getDate() - diff);
+  } else if (range === "month") {
+    start.setDate(1);
+  }
 
   const orders = await prisma.order.findMany({
     where: {
-      createdAt: { gte: startOfDay },
+      createdAt: { gte: start },
       status: { not: "WAITING_PAYMENT" },
     },
     select: { status: true, totalAmount: true },

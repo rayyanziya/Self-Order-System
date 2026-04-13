@@ -1,82 +1,92 @@
 "use client";
 
-import { useState } from "react";
 import type { OrderDTO } from "@/lib/types";
-import Modal from "@/components/ui/Modal";
-import Button from "@/components/ui/Button";
 import PaymentSimulator from "./PaymentSimulator";
 import { CURRENCY } from "@/lib/constants";
 
-interface OrderDetailModalProps {
-  order: OrderDTO | null;
-  onClose: () => void;
-  onPaid: () => void;
+function getNumberColor(orderNumber: string): string {
+  if (orderNumber.startsWith("AB")) return "text-purple-600";
+  if (orderNumber.startsWith("A")) return "text-orange-500";
+  return "text-teal-600";
 }
 
-export default function OrderDetailModal({
+interface OrderDetailPanelProps {
+  order: OrderDTO;
+  onPaid: () => void;
+  onDeselect: () => void;
+}
+
+export default function OrderDetailPanel({
   order,
-  onClose,
   onPaid,
-}: OrderDetailModalProps) {
-  const [confirmed, setConfirmed] = useState(false);
-
-  const handleClose = () => {
-    setConfirmed(false);
-    onClose();
-  };
-
+  onDeselect,
+}: OrderDetailPanelProps) {
   const handlePaid = () => {
     onPaid();
-    handleClose();
+    onDeselect();
   };
 
   return (
-    <Modal
-      open={!!order}
-      onClose={handleClose}
-      title={order ? order.orderNumber : ""}
-    >
-      {order && (
-        <div className="space-y-4">
-          {/* Order items */}
-          <div className="space-y-2">
-            {order.items.map((item) => (
-              <div key={item.id} className="flex justify-between text-sm">
-                <span className="text-stone-700">
-                  {item.menuItem.name} × {item.quantity}
-                </span>
-                <span className="font-medium text-stone-900">
-                  {item.unitPrice * item.quantity} {CURRENCY}
-                </span>
-              </div>
-            ))}
-          </div>
-
-          <div className="flex justify-between font-bold text-base border-t border-stone-200 pt-3">
-            <span>Total</span>
-            <span className="text-orange-600">
-              {order.totalAmount} {CURRENCY}
-            </span>
-          </div>
-
-          {!confirmed ? (
-            <Button
-              variant="primary"
-              size="lg"
-              className="w-full"
-              onClick={() => setConfirmed(true)}
-            >
-              Confirm Order
-            </Button>
-          ) : (
-            <PaymentSimulator
-              orderId={order.id}
-              totalAmount={order.totalAmount}
-              onSuccess={handlePaid}
-            />
-          )}
+    <div className="space-y-6 h-full">
+      {/* Header */}
+      <div className="flex items-start justify-between">
+        <div>
+          <p className={`text-5xl font-black tracking-wider ${getNumberColor(order.orderNumber)}`}>
+            {order.orderNumber}
+          </p>
+          <span
+            className={`inline-block mt-2 text-xs font-semibold px-2 py-1 rounded-full ${
+              order.orderType === "TAKEAWAY"
+                ? "bg-sky-100 text-sky-700"
+                : "bg-emerald-100 text-emerald-700"
+            }`}
+          >
+            {order.orderType === "TAKEAWAY" ? "Takeaway" : "Dine In"}
+          </span>
         </div>
-      )}
-    </Modal>
+        <button
+          onClick={onDeselect}
+          className="text-stone-400 hover:text-stone-600 transition-colors text-sm font-medium mt-1"
+        >
+          ✕ Close
+        </button>
+      </div>
+
+      {/* Items */}
+      <div className="space-y-3 border-t border-stone-100 pt-4">
+        {order.items.map((item) => (
+          <div key={item.id}>
+            <div className="flex justify-between text-sm">
+              <span className="text-stone-700">
+                {item.menuItem.name} × {item.quantity}
+              </span>
+              <span className="font-semibold text-stone-900">
+                {item.unitPrice * item.quantity} {CURRENCY}
+              </span>
+            </div>
+            {item.note && (
+              <p className="text-xs text-stone-400 italic mt-0.5 pl-1">
+                → {item.note}
+              </p>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* Total */}
+      <div className="flex justify-between items-center font-bold text-xl border-t border-stone-200 pt-4">
+        <span className="text-stone-800">Total</span>
+        <span className="text-orange-500 text-2xl">
+          {order.totalAmount} {CURRENCY}
+        </span>
+      </div>
+
+      {/* Payment */}
+      <PaymentSimulator
+        orderId={order.id}
+        totalAmount={order.totalAmount}
+        onSuccess={handlePaid}
+      />
+    </div>
   );
 }

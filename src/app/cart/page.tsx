@@ -40,6 +40,7 @@ export default function CartPage() {
       }
 
       const { order } = await res.json();
+      localStorage.setItem("sos_active_order_id", String(order.id));
       clearCart();
       router.push(`/order/${order.id}/confirmed`);
     } catch (e) {

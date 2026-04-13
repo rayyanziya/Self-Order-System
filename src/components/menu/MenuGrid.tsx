@@ -25,7 +25,7 @@ export default function MenuGrid({
   }
 
   return (
-    <div className="grid gap-4 sm:grid-cols-2">
+    <div className="grid gap-4 grid-cols-2">
       {items.map((item) => (
         <MenuItemCard
           key={item.id}
