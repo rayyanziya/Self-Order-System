@@ -38,7 +38,7 @@ function timeAgo(iso: string): string {
 
 function LiveMonitor() {
   const [orders, setOrders] = useState<OrderDTO[]>([]);
-  const [tick, setTick] = useState(0); // force re-render for time-ago
+  const [, setTick] = useState(0); // force re-render for time-ago
 
   const fetchOrders = useCallback(async () => {
     const [waiting, inProg, ready] = await Promise.all([
