@@ -1,0 +1,55 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// Category: "FOOD" | "DRINK"
+// OrderStatus: "WAITING_PAYMENT" | "IN_PROGRESS" | "READY"
+
+model MenuItem {
+  id          Int         @id @default(autoincrement())
+  code        String      @unique
+  name        String
+  price       Float
+  category    String      // "FOOD" | "DRINK"
+  description String?
+  imagePath   String?     // e.g. "/images/ceker_mercon.jpg"
+  available   Boolean     @default(true)
+  orderItems  OrderItem[]
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+}
+
+model Order {
+  id          Int         @id @default(autoincrement())
+  orderNumber String      // "A-001" | "B-001" | "AB-001"
+  orderType   String      @default("DINE_IN") // "DINE_IN" | "TAKEAWAY"
+  status      String      @default("WAITING_PAYMENT") // "WAITING_PAYMENT" | "IN_PROGRESS" | "READY"
+  cleared     Boolean     @default(false) // staff cleared from kitchen view
+  totalAmount Float
+  items       OrderItem[]
+  paidAt      DateTime?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+}
+
+model OrderItem {
+  id         Int      @id @default(autoincrement())
+  orderId    Int
+  order      Order    @relation(fields: [orderId], references: [id])
+  menuItemId Int
+  menuItem   MenuItem @relation(fields: [menuItemId], references: [id])
+  quantity   Int
+  unitPrice  Float
+  note       String?  // optional customer note
+}
+
+model DailyCounter {
+  id      Int    @id @default(autoincrement())
+  date    String @unique
+  counter Int    @default(0)
+}
